@@ -1,0 +1,1893 @@
+{
+  "name": "RAG AI Agent",
+  "nodes": [
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.splitInBatches",
+      "typeVersion": 3,
+      "position": [
+        304,
+        1152
+      ],
+      "id": "2f196def-56ed-4189-825a-60d8bdea7447",
+      "name": "Loop Over Items"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "5f8cfb2b-23ba-4214-8728-0b886f36f682",
+              "name": "file_id",
+              "value": "={{ $json.id }}",
+              "type": "string"
+            },
+            {
+              "id": "1681f76c-27bb-4f9b-aa4c-bd0827831f93",
+              "name": "file_type",
+              "value": "={{ $json.mimeType }}",
+              "type": "string"
+            },
+            {
+              "id": "60b316e0-598c-49c8-a5f3-679926042520",
+              "name": "file_name",
+              "value": "={{ $json.name }}",
+              "type": "string"
+            },
+            {
+              "id": "f20252ef-6e7e-4caf-bee4-35abc2570c06",
+              "name": "file_url",
+              "value": "={{ $json.webViewLink }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        528,
+        1152
+      ],
+      "id": "706cb936-a14c-43e8-b1a7-aae6874e0725",
+      "name": "设置文件ID"
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "12rbO2Bi0QIKJWqKkJrzbesqyLAMLo7Db",
+          "mode": "list",
+          "cachedResultName": "n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/12rbO2Bi0QIKJWqKkJrzbesqyLAMLo7Db"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        1056
+      ],
+      "id": "954c8800-61e6-4db8-98f2-bb6815ec14da",
+      "name": "新建文件",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Qf51TFpkXFM1c5rW",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "pollTimes": {
+          "item": [
+            {
+              "mode": "everyMinute"
+            }
+          ]
+        },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "12rbO2Bi0QIKJWqKkJrzbesqyLAMLo7Db",
+          "mode": "list",
+          "cachedResultName": "n8n",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/12rbO2Bi0QIKJWqKkJrzbesqyLAMLo7Db"
+        },
+        "event": "fileUpdated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [
+        80,
+        1248
+      ],
+      "id": "a936fd01-7655-4477-8d4e-1a7d72ad41d3",
+      "name": "上传文件",
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Qf51TFpkXFM1c5rW",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM documents\nWHERE metadata->>'file_id' LIKE '%' || $1 || '%';",
+        "options": {
+          "queryReplacement": "={{ $json.file_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        752,
+        1152
+      ],
+      "id": "73bcf34b-336a-4b9a-97dd-86f44a4955cb",
+      "name": "删除旧数据",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM document_rows\nWHERE dataset_id LIKE '%' || $1 || '%';",
+        "options": {
+          "queryReplacement": "={{ $('设置文件ID').item.json.file_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        976,
+        1152
+      ],
+      "id": "e84c1865-cded-4acd-8e38-90c0e1469fdf",
+      "name": "删除旧的数据行",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('设置文件ID').item.json.file_id }}",
+            "title": "={{ $('设置文件ID').item.json.file_name }}",
+            "url": "={{ $('设置文件ID').item.json.file_url }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "schema",
+              "displayName": "schema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1200,
+        1152
+      ],
+      "id": "9e3a0928-ce00-46f2-8095-1dbae75bebdf",
+      "name": "插入文档元数据",
+      "executeOnce": true,
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": {
+          "__rl": true,
+          "value": "={{ $('设置文件ID').item.json.file_id }}",
+          "mode": "id"
+        },
+        "options": {
+          "googleFileConversion": {
+            "conversion": {
+              "docsToFormat": "text/plain"
+            }
+          }
+        }
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [
+        1424,
+        1152
+      ],
+      "id": "1a7ecb49-5215-4a11-ad27-775e60a9f619",
+      "name": "下载文件",
+      "executeOnce": true,
+      "credentials": {
+        "googleDriveOAuth2Api": {
+          "id": "Qf51TFpkXFM1c5rW",
+          "name": "Google Drive account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "leftValue": "={{ $('设置文件ID').item.json.file_type }}",
+                    "rightValue": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals"
+                    },
+                    "id": "309e6c58-3635-4d1d-9650-7ac63f13c4e7"
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "f49cfb41-5a1d-4aef-8a34-85b8d0d6e1c7",
+                    "leftValue": "={{ $('设置文件ID').item.json.file_type }}",
+                    "rightValue": "application/vnd.google-apps.spreadsheet",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "daa554a6-c52c-45e1-9df7-bd3b8d5e316e",
+                    "leftValue": "={{ $('设置文件ID').item.json.file_type }}",
+                    "rightValue": "application/pdf",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            },
+            {
+              "conditions": {
+                "options": {
+                  "caseSensitive": true,
+                  "leftValue": "",
+                  "typeValidation": "strict",
+                  "version": 2
+                },
+                "conditions": [
+                  {
+                    "id": "29f3b8ff-253e-4526-99f7-4e107bc87a05",
+                    "leftValue": "={{ $('设置文件ID').item.json.file_type }}",
+                    "rightValue": "application/vnd.google-apps.document",
+                    "operator": {
+                      "type": "string",
+                      "operation": "equals",
+                      "name": "filter.operator.equals"
+                    }
+                  }
+                ],
+                "combinator": "and"
+              }
+            }
+          ]
+        },
+        "options": {
+          "fallbackOutput": "extra"
+        }
+      },
+      "type": "n8n-nodes-base.switch",
+      "typeVersion": 3.3,
+      "position": [
+        1648,
+        1104
+      ],
+      "id": "a9eaae64-b568-472f-a2b3-dfa6ad2a4e3f",
+      "name": "Switch"
+    },
+    {
+      "parameters": {
+        "operation": "xlsx",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1872,
+        768
+      ],
+      "id": "723e51a5-7e2f-4bbd-84df-98cb1bec305b",
+      "name": "从 Excel 文件中提取"
+    },
+    {
+      "parameters": {
+        "operation": "pdf",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1872,
+        1264
+      ],
+      "id": "2f222bb6-f08c-4494-b706-ffd35132de54",
+      "name": "从 pdf 文件中提取"
+    },
+    {
+      "parameters": {
+        "aggregate": "aggregateAllItemData",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.aggregate",
+      "typeVersion": 1,
+      "position": [
+        2160,
+        816
+      ],
+      "id": "cd8776ea-0121-4b86-805a-9d6d6affc51b",
+      "name": "Aggregate"
+    },
+    {
+      "parameters": {
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_rows",
+          "mode": "list",
+          "cachedResultName": "document_rows"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "dataset_id": "={{ $('设置文件ID').item.json.file_id }}",
+            "row_data": "={{ $json.toJsonString().replaceAll(/'/g, \"''\") }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": false,
+              "defaultMatch": true,
+              "display": true,
+              "type": "number",
+              "canBeUsedToMatch": true,
+              "removed": true
+            },
+            {
+              "id": "dataset_id",
+              "displayName": "dataset_id",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true
+            },
+            {
+              "id": "row_data",
+              "displayName": "row_data",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "object",
+              "canBeUsedToMatch": true,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2160,
+        1024
+      ],
+      "id": "86b85efd-6ec0-4f40-ad2d-2c78ccfba9eb",
+      "name": "Insert rows in a table",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "fieldsToSummarize": {
+          "values": [
+            {
+              "aggregation": "concatenate",
+              "field": "data"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.summarize",
+      "typeVersion": 1.1,
+      "position": [
+        2448,
+        816
+      ],
+      "id": "2c7e4d74-180c-4903-9263-eddfc74ed78d",
+      "name": "Summarize"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "d1606b1d-68f5-4a62-a3f6-0257ddfa8990",
+              "name": "schema",
+              "value": "={{ $('从 Excel 文件中提取').isExecuted ? $('从 Excel 文件中提取').first().json.keys().toJsonString() : $('从 CSV 文件中提取').first().json.keys().toJsonString() }}",
+              "type": "string"
+            },
+            {
+              "id": "2ce43fab-d9f4-4416-9d28-416816700c2c",
+              "name": "data",
+              "value": "={{ $json.concatenated_data }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        2816,
+        768
+      ],
+      "id": "492c0fcb-6be6-4f33-bb79-c318f263ccc0",
+      "name": "设置Schema"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1872,
+        1072
+      ],
+      "id": "099905fa-fa96-4131-b8c0-08332638c9d5",
+      "name": "从 CSV 文件中提取"
+    },
+    {
+      "parameters": {
+        "operation": "text",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.extractFromFile",
+      "typeVersion": 1.1,
+      "position": [
+        1872,
+        1456
+      ],
+      "id": "9f7721b4-7411-4384-9880-e3a9acf8f681",
+      "name": "从 txt 文件中提取",
+      "alwaysOutputData": true
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        2176,
+        1584
+      ],
+      "id": "97f3ae12-d660-464c-a7e7-aac5d8520a75",
+      "name": "Google Gemini Chat Model",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EZgJ4W8HBQhsDWpq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "code": {
+          "execute": {
+            "code": "const { PromptTemplate } = require('@langchain/core/prompts');\n\n// 1. 获取输入数据\nconst documentContent = $input.item.json?.data || $input.item.json?.text;\nconst maxChunkSize = 750; // 最大字符数\nconst minChunkSize = 300;  // 最小字符数\n\nif (!documentContent) {\n    throw new Error('No document found in input');\n}\n\nconst llm = await this.getInputConnectionData('ai_languageModel', 0);\n\n// 2. 清理文本函数\nfunction cleanText(text) {\n    // 将换行符等空白字符替换为单个空格，保持紧凑\n    return text.replace(/\\s+/g, ' ').trim();\n}\n\nconst chunks = [];\nlet remainingText = cleanText(documentContent);\nlet chunkNumber = 1;\n\n// 定义中文和英文的结束标点符号集合 (用于智能向后包含标点)\nconst endPunctuation = new Set([\n    '.', '!', '?', ',', ';', ':', ' ', \n    '。', '！', '？', '，', '；', '：', '”', '’', '…', '、', '）', '》'\n]);\n\nif (remainingText.length <= maxChunkSize) {\n    chunks.push({\n        content: remainingText,\n        chunk: chunkNumber,\n        chunk_size: remainingText.length\n    });\n} else {\n    while (remainingText) {\n        // 截取当前待分析的文本块\n        const textToAnalyze = remainingText.substring(0, maxChunkSize);\n        \n        // 3. 核心修改：使用全中文 Prompt，指令更清晰\n        const promptText = `你是一位专业的文档编辑，正在分析一段文本以寻找最佳的切分点。文本内容可能是中文或英文。\n\n你的目标：保持语义连贯性，在话题自然转换、段落结束或逻辑告一段落的地方进行切分。\n\n请仔细阅读下方文本，并找出在第 ${maxChunkSize} 个字符之前的最佳切分位置：\n\n\"\"\"\n${textToAnalyze}\n\"\"\"\n\n指令要求：\n1. 寻找章节标题、段落结尾、话题转换点。\n2. 找到属于当前部分的**最后一句或最后一段话**。\n3. 输出切分点**之前**的最后 5 到 10 个字符（原文摘录，包含标点符号）。\n4. **不要**输出任何解释或多余的字，只输出这个字符串。\n\n示例：\n- 如果要在“...公司成立于2022年。”之后切分，请输出：“于2022年。”\n- 如果要在“...founded in 2022.”之后切分，请输出：“in 2022.”`;\n        \n        const prompt = PromptTemplate.fromTemplate(promptText);\n        const chain = prompt.pipe(llm);\n        \n        let breakPoint = maxChunkSize;\n        \n        try {\n            const response = await chain.invoke();\n            // 获取 AI 返回的定位短语\n            let anchorPhrase = response.content || response.text || response.toString();\n            // 去除首尾可能存在的引号（AI 有时会自作聪明加引号）\n            anchorPhrase = anchorPhrase.trim().replace(/^[\"']|[\"']$/g, ''); \n            \n            if (anchorPhrase) {\n                // 4. 定位逻辑：查找短语在文本中最后出现的位置\n                const phraseIndex = textToAnalyze.lastIndexOf(anchorPhrase);\n                \n                if (phraseIndex !== -1) {\n                    // 初始切分点 = 短语开始位置 + 短语长度\n                    breakPoint = phraseIndex + anchorPhrase.length;\n                    \n                    // 5. 标点容错：如果切分点后面紧跟着标点符号，继续向后包含\n                    // 防止把句号或闭引号切到下一段去\n                    while (breakPoint < textToAnalyze.length && \n                           endPunctuation.has(textToAnalyze[breakPoint])) {\n                        breakPoint++;\n                    }\n                    \n                    // 再次兜底，确保不超出最大限制\n                    breakPoint = Math.min(breakPoint, maxChunkSize);\n                }\n            }\n        } catch (error) {\n            console.log('LLM failed to determine breakpoint, using max size:', error.message);\n            // 如果 AI 出错，回退到强制切分\n            breakPoint = maxChunkSize;\n        }\n        \n        // 防止死循环的防御性代码\n        if (breakPoint <= 0) breakPoint = maxChunkSize;\n\n        const chunk = remainingText.substring(0, breakPoint).trim();\n        \n        if (chunk) {\n            chunks.push({\n                content: chunk,\n                chunk: chunkNumber,\n                chunk_size: chunk.length\n            });\n            chunkNumber++;\n        }\n        \n        remainingText = remainingText.substring(breakPoint).trim();\n        \n        if (!remainingText) {\n            break;\n        }\n    }\n}\n\n// 6. 合并过小片段 (逻辑保持不变)\n// 这里的逻辑是：如果切分出来的片段太短（< minChunkSize），尝试跟前后的片段合并\nlet i = 0;\nwhile (i < chunks.length) {\n    if (chunks[i].chunk_size < minChunkSize) {\n        // 尝试合并到下一个\n        if (i + 1 < chunks.length && \n            chunks[i].chunk_size + chunks[i + 1].chunk_size <= maxChunkSize) {\n            chunks[i].content += ' ' + chunks[i + 1].content;\n            chunks[i].chunk_size = chunks[i].content.length;\n            chunks.splice(i + 1, 1);\n        } \n        // 尝试合并到上一个\n        else if (i > 0 && \n                 chunks[i - 1].chunk_size + chunks[i].chunk_size <= maxChunkSize) {\n            chunks[i - 1].content += ' ' + chunks[i].content;\n            chunks[i - 1].chunk_size = chunks[i - 1].content.length;\n            chunks.splice(i, 1);\n        } else {\n            i++;\n        }\n    } else {\n        i++;\n    }\n}\n\nconst returnData = chunks.map(chunk => ({\n    json: chunk\n}));\n\nreturn returnData;"
+          }
+        },
+        "inputs": {
+          "input": [
+            {
+              "type": "ai_languageModel",
+              "maxConnections": 1,
+              "required": true
+            },
+            {
+              "type": "main",
+              "required": true
+            }
+          ]
+        },
+        "outputs": {
+          "output": [
+            {
+              "type": "main"
+            }
+          ]
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.code",
+      "typeVersion": 1,
+      "position": [
+        2096,
+        1360
+      ],
+      "id": "6bf7f2c2-5783-48ed-9c37-bff48fc7ea60",
+      "name": "智能切分"
+    },
+    {
+      "parameters": {
+        "operation": "upsert",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "columns": {
+          "mappingMode": "defineBelow",
+          "value": {
+            "id": "={{ $('设置文件ID').item.json.file_id }}",
+            "schema": "={{ $json.schema }}"
+          },
+          "matchingColumns": [
+            "id"
+          ],
+          "schema": [
+            {
+              "id": "id",
+              "displayName": "id",
+              "required": true,
+              "defaultMatch": true,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": true,
+              "removed": false
+            },
+            {
+              "id": "title",
+              "displayName": "title",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "url",
+              "displayName": "url",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": true
+            },
+            {
+              "id": "created_at",
+              "displayName": "created_at",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "dateTime",
+              "canBeUsedToMatch": false
+            },
+            {
+              "id": "schema",
+              "displayName": "schema",
+              "required": false,
+              "defaultMatch": false,
+              "display": true,
+              "type": "string",
+              "canBeUsedToMatch": false,
+              "removed": false
+            }
+          ],
+          "attemptToConvertTypes": false,
+          "convertFieldsToString": false
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3168,
+        768
+      ],
+      "id": "1e21ad14-3017-4301-a4f7-12096b64222d",
+      "name": "新增或修改文档metadata",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "rule": {
+          "interval": [
+            {
+              "field": "minutes"
+            }
+          ]
+        }
+      },
+      "type": "n8n-nodes-base.scheduleTrigger",
+      "typeVersion": 1.3,
+      "position": [
+        1824,
+        464
+      ],
+      "id": "5b872f07-2087-471f-9d82-50aad368f63c",
+      "name": "Schedule Trigger"
+    },
+    {
+      "parameters": {
+        "public": true,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.chatTrigger",
+      "typeVersion": 1.4,
+      "position": [
+        192,
+        320
+      ],
+      "id": "5352a269-4af7-4158-855c-8d02f90322fb",
+      "name": "聊天窗口",
+      "webhookId": "7e7658c7-96a5-4763-9ca8-75fed09a13d8"
+    },
+    {
+      "parameters": {
+        "content": "# 知识入库",
+        "height": 1200,
+        "width": 3440,
+        "color": 2
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        704
+      ],
+      "typeVersion": 1,
+      "id": "42b47ed2-3fee-4f6a-ae07-5ce286195901",
+      "name": "Sticky Note"
+    },
+    {
+      "parameters": {
+        "content": "# 删除已删除文件的相关记录",
+        "height": 384,
+        "width": 1680,
+        "color": 6
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1760,
+        304
+      ],
+      "typeVersion": 1,
+      "id": "6e4dcdb5-4032-4f4b-80bf-6e79cb204480",
+      "name": "Sticky Note1"
+    },
+    {
+      "parameters": {
+        "content": "# 创建数据表",
+        "height": 288,
+        "width": 1680,
+        "color": 3
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        1760,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "785494a2-3c13-40de-bc8f-0a5112add00d",
+      "name": "Sticky Note2"
+    },
+    {
+      "parameters": {
+        "content": "# RAG混合查询",
+        "height": 688,
+        "width": 1744,
+        "color": 4
+      },
+      "type": "n8n-nodes-base.stickyNote",
+      "position": [
+        0,
+        0
+      ],
+      "typeVersion": 1,
+      "id": "d6515a61-89c3-4084-8cac-cc2637000fbe",
+      "name": "Sticky Note3"
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            {
+              "id": "366b3a69-6a03-4b84-a3dd-af696e0bf0d9",
+              "name": "chatInput",
+              "value": "={{ $json.chatInput }}",
+              "type": "string"
+            },
+            {
+              "id": "c51bdefa-979a-4dc5-acfa-b944ec304559",
+              "name": "sessionId",
+              "value": "={{ $json.sessionId }}",
+              "type": "string"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.set",
+      "typeVersion": 3.4,
+      "position": [
+        416,
+        320
+      ],
+      "id": "e1d6bd52-4079-4d43-b4ed-1cbd02a46d6c",
+      "name": "设置变量"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.chatInput }}",
+        "options": {
+          "systemMessage": "你是一名私人助理，负责从文档集中回答问题。这些文档要么是基于文本的（Txt、docs、提取的 PDF 等），要么是表格数据（CSV 或 Excel 文档）。\n你拥有一些工具，可在 “documents” 表中执行检索增强生成（RAG），在 “document_metadata” 表中查找知识库中的可用文档，从给定文档中提取所有文本，以及在 “document_rows” 表中用 SQL 查询表格文件。\n除非问题需要对表格数据进行 SQL 查询（如获取总和、查找最大值等，这些用 RAG 查找可能不可靠），否则始终先执行 RAG。如果 RAG 没有帮助，那就查看你可用的文档，找到一些你认为可能包含答案的文档，然后对其进行分析。\n如果没有找到答案，一定要告诉用户。不要为了让用户满意而编造内容。\n"
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3,
+      "position": [
+        896,
+        112
+      ],
+      "id": "fcc1b24e-6857-4768-a9a4-7dcfde1ac3b1",
+      "name": "RAG AI Agent"
+    },
+    {
+      "parameters": {
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.lmChatGoogleGemini",
+      "typeVersion": 1,
+      "position": [
+        640,
+        336
+      ],
+      "id": "b8ea39f5-959d-4d0f-83fe-2a504c6a7a1f",
+      "name": "Gemini-2.5-flash",
+      "credentials": {
+        "googlePalmApi": {
+          "id": "EZgJ4W8HBQhsDWpq",
+          "name": "Google Gemini(PaLM) Api account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "使用 RAG 在知识库中查找信息。",
+        "tableName": "documents",
+        "topK": 25,
+        "useReranker": true,
+        "options": {
+          "columnNames": {
+            "values": {
+              "contentColumnName": "content"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        1344,
+        336
+      ],
+      "id": "9a8ee6a7-b950-418f-829b-f8bfdbfb8a2e",
+      "name": "RAG 查询",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "bge-m3:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        1344,
+        480
+      ],
+      "id": "99acc0ce-9824-4ee4-9521-29a18c2e4bb9",
+      "name": "Embedding 模型",
+      "credentials": {
+        "openAiApi": {
+          "id": "bbgZngXAO7jvC1cy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "tableName": "documents",
+        "options": {
+          "columnNames": {
+            "values": {
+              "contentColumnName": "content"
+            }
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePGVector",
+      "typeVersion": 1.3,
+      "position": [
+        2704,
+        1312
+      ],
+      "id": "2b1aa9b2-2a5e-457a-83bd-c8655602a63a",
+      "name": "向量数据库",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "bge-m3:latest",
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [
+        2480,
+        1552
+      ],
+      "id": "605c1fa3-1641-4e1d-929e-a1058bede2ed",
+      "name": "Embeddings 模型",
+      "credentials": {
+        "openAiApi": {
+          "id": "bbgZngXAO7jvC1cy",
+          "name": "OpenAi account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsonMode": "expressionData",
+        "jsonData": "={{ $json.content || $json.data || $json.text || $json.concatenated_data }}",
+        "textSplittingMode": "custom",
+        "options": {
+          "metadata": {
+            "metadataValues": [
+              {
+                "name": "file_id",
+                "value": "={{ $('设置文件ID').first().json.file_id }}"
+              },
+              {
+                "name": "file_title",
+                "value": "={{ $('设置文件ID').first().json.file_name }}"
+              }
+            ]
+          }
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [
+        2800,
+        1536
+      ],
+      "id": "0fe6767a-74a0-43af-9217-bcd8994515cc",
+      "name": "包装Document"
+    },
+    {
+      "parameters": {
+        "chunkSize": 750,
+        "chunkOverlap": 100,
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.textSplitterRecursiveCharacterTextSplitter",
+      "typeVersion": 1,
+      "position": [
+        2880,
+        1744
+      ],
+      "id": "a474a9d1-facb-445b-b4d7-1f918cb2b86d",
+      "name": "文本切片"
+    },
+    {
+      "parameters": {
+        "url": "https://www.googleapis.com/drive/v3/files",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "googleDriveOAuth2Api",
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "q",
+              "value": "'12rbO2Bi0QIKJWqKkJrzbesqyLAMLo7Db' in parents and trashed = true"
+            },
+            {
+              "name": "fields",
+              "value": "files(id,name,mimeType,webViewLink,trashed,trashedTime)"
+            },
+            {
+              "name": "pageSize",
+              "value": "1000"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.3,
+      "position": [
+        2048,
+        464
+      ],
+      "id": "75509db2-ba82-4126-a8a4-20f895e47f8a",
+      "name": "获取被删除文件"
+    },
+    {
+      "parameters": {
+        "jsCode": "// =========================================================\n// 步骤 1: 获取上一个节点（Google Drive HTTP Request）的输出数据\n// =========================================================\n\n// $input.first().json 是 n8n 的标准语法。\n// 它用于获取输入数据中的第一项 JSON 内容。\nconst response = $input.first().json;\n\n// 从 API 返回结果中提取 'files' 数组。\n// '|| []' 是一个安全机制（兜底写法）：\n// 如果 API 返回的结果里没有 files 字段（比如出错或为空），\n// 就把它赋值为一个空数组，防止程序后面报错崩溃。\nconst trashedFiles = response.files || [];\n\n\n// =========================================================\n// 步骤 2: 检查是否有数据（空值处理）\n// =========================================================\n\n// 判断数组长度是否为 0，即是否找到了被删除的文件\nif (trashedFiles.length === 0) {\n  // 如果没有文件，直接返回一个包含提示信息的对象。\n  // 这样做可以让后续的 IF 节点根据 'count' 来判断是否结束流程，\n  // 避免流程因为没有数据而静默失败。\n  return [{ message: '没有发现被删除的文件', count: 0 }];\n}\n\n\n// =========================================================\n// 步骤 3: 数据清洗与转换 (Data Mapping)\n// =========================================================\n\n// 使用 .map() 函数遍历每一个文件对象，重新整理格式。\n// n8n 的特性：如果你在这里返回一个对象数组，\n// n8n 会自动将其识别为“多条数据 Items”。\n// 这意味着接下来的节点（比如发邮件）会对列表里的 *每一个* 文件执行一次。\nreturn trashedFiles.map(file => ({\n  // 左边是你自定义的新字段名 : 右边是 Google Drive 原始返回的字段名\n  \n  file_id: file.id,             // 文件的唯一 ID，用于后续恢复或删除操作\n  file_name: file.name,         // 文件名\n  file_type: file.mimeType,     // 文件类型 (如 folder, image/jpeg, application/pdf)\n  file_url: file.webViewLink,   // 文件的网页访问链接 (如果 API 请求了该字段)\n  trashed_time: file.trashedTime // 文件被删除的时间\n}));"
+      },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [
+        2272,
+        464
+      ],
+      "id": "8a2a1c9e-8d3e-4dc0-a555-a4eb3e6f5901",
+      "name": "解析"
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DO $$\nBEGIN\n    IF EXISTS (SELECT 1 FROM information_schema.tables WHERE table_name = 'documents') THEN\n        EXECUTE 'DELETE FROM documents_pg WHERE metadata->>''file_id'' LIKE ''%' || $1 || '%''';\n    END IF;\nEND\n$$;",
+        "options": {
+          "queryReplacement": "={{ $('解析').item.json.file_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2720,
+        464
+      ],
+      "id": "6a0c08a5-4b9b-413d-8f02-339ec19eb3f9",
+      "name": "删除被删除文档向量记录",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM document_rows\nWHERE dataset_id LIKE '%' || $1 || '%';",
+        "options": {
+          "queryReplacement": "={{ $('解析').first().json.file_id }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2944,
+        464
+      ],
+      "id": "b4f19083-60e3-44ba-9539-5263413fee23",
+      "name": "删除被删除Excel 行记录",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "SELECT id FROM document_metadata WHERE id = '{{ $json.file_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2496,
+        464
+      ],
+      "id": "55abded2-c8f5-4916-80ec-289a6e11eb35",
+      "name": "查询被删除文档记录",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DELETE FROM document_metadata WHERE id = '{{ $('解析').first().json.file_id }}'",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        3168,
+        464
+      ],
+      "id": "9bc2658c-3821-4ded-9747-05826ea54379",
+      "name": "删除被删除文档记录",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DROP TABLE IF EXISTS public.document_metadata CASCADE;\nCREATE TABLE document_metadata ( id TEXT PRIMARY KEY, title TEXT, url TEXT, created_at TIMESTAMP DEFAULT NOW(), schema TEXT ); ",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        1824,
+        112
+      ],
+      "id": "f198ee52-c9bf-4ea3-b361-7af82f59aed6",
+      "name": "创建文档表document_metadata",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "DROP TABLE IF EXISTS public.document_rows CASCADE;\nCREATE TABLE document_rows (\n    id SERIAL PRIMARY KEY,\n    dataset_id TEXT REFERENCES document_metadata(id),\n    row_data JSONB  -- 存储实际的行数据\n);",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2080,
+        112
+      ],
+      "id": "f08d3aec-8b76-4e53-8528-6a772d9c9fe8",
+      "name": "创建 Excel 行记录表document_rows",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {},
+      "type": "@n8n/n8n-nodes-langchain.memoryPostgresChat",
+      "typeVersion": 1.3,
+      "position": [
+        768,
+        336
+      ],
+      "id": "5866b9a0-559f-4f75-bde1-68842ec79fbe",
+      "name": "Postgres Chat Memory",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "使用此工具可获取所有可用文档，若文件为 CSV 或 Excel 格式，还包括表格架构。",
+        "operation": "select",
+        "schema": {
+          "__rl": true,
+          "mode": "list",
+          "value": "public"
+        },
+        "table": {
+          "__rl": true,
+          "value": "document_metadata",
+          "mode": "list",
+          "cachedResultName": "document_metadata"
+        },
+        "returnAll": true,
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        896,
+        336
+      ],
+      "id": "4968f448-99d3-4060-8df5-82926477dc12",
+      "name": "List Documents",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "给定一个文件 ID，从文档中获取文本。",
+        "operation": "executeQuery",
+        "query": "SELECT \n    string_agg(content, ' ') as document_text\nFROM documents_pg\n  WHERE metadata->>'file_id' = $1\nGROUP BY metadata->>'file_id';",
+        "options": {
+          "queryReplacement": "={{ $fromAI('file_id') }}"
+        }
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1024,
+        336
+      ],
+      "id": "1bbac7fa-d55b-418c-bb1b-6a443d83be94",
+      "name": "Get File Content",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "descriptionType": "manual",
+        "toolDescription": "运行一条 SQL 查询 —— 一旦你知道要查询的文件 ID，就用它来从 document_rows 表中进行查询。dataset_id 就是 file_id，并且你总是使用 row_data 进行筛选，这是一个 jsonb 字段，包含 document_metadata 表中给出的文件 schema 的所有键。\n示例查询：\nSELECT AVG((row_data->>'revenue')::numeric)\nFROM document_rows\nWHERE dataset_id = '123';\n示例查询 2：\nSELECT\nrow_data->>'category' as category,\nSUM((row_data->>'sales')::numeric) as total_sales\nFROM dataset_rows\nWHERE dataset_id = '123'\nGROUP BY row_data->>'category';",
+        "operation": "executeQuery",
+        "query": "{{ $fromAI('sql_query') }}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgresTool",
+      "typeVersion": 2.6,
+      "position": [
+        1152,
+        336
+      ],
+      "id": "c58aa6c6-9823-4041-95d0-2ea1ba74ed9f",
+      "name": "Query Document Rows",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- 可选：先删除已存在的函数和表（非生产环境谨慎）\nDROP FUNCTION IF EXISTS match_documents(vector, float, int);\nDROP TABLE IF EXISTS documents CASCADE;\n\n-- 1. 启用 pgvector 扩展\n-- 这是让 Postgres 能够存储和计算向量数据的关键\nCREATE EXTENSION IF NOT EXISTS vector;\n\n-- 2. 创建文档表 (documents)\n-- 这张表将用来存放你的知识库切片\nCREATE TABLE documents (\n  id bigserial PRIMARY KEY,\n  content text, -- 存放切片后的文本内容\n  metadata jsonb, -- 存放来源、页码等元数据\n  embedding vector(1024) -- 存放向量数据\n);\n\n-- 3. 为向量列创建索引（示例使用 ivfflat，需要设置 lists 参数，且必须在表有数据前准备或在插入向量前将向量维度与数据量考虑好）\n-- 调整 lists 的值以平衡索引速度与查询性能（例如 100 或 1000）\nCREATE INDEX ON documents USING ivfflat (embedding vector_l2_ops) WITH (lists = 100);\n\n-- 推荐：ANALYZE documents; -- 在有数据后运行以更新统计信息\n\n-- 4. 创建相似度搜索函数 (match_documents)\n-- n8n 将调用这个函数来检索最相关的文档\nCREATE OR REPLACE FUNCTION match_documents (\n  query_embedding vector(1024),\n  match_threshold float,\n  match_count int\n)\nRETURNS TABLE (\n  id bigint,\n  content text,\n  metadata jsonb,\n  similarity float\n)\nLANGUAGE plpgsql\nAS $$\nBEGIN\n  RETURN QUERY\n  SELECT\n    d.id,\n    d.content,\n    d.metadata,\n    1 - (d.embedding <=> query_embedding) AS similarity\n  FROM documents d\n  WHERE 1 - (d.embedding <=> query_embedding) > match_threshold\n  ORDER BY d.embedding <=> query_embedding\n  LIMIT match_count;\nEND;\n$$;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2336,
+        112
+      ],
+      "id": "df203d5c-e55b-495a-9f4e-a62e4faa6ccc",
+      "name": "创建向量表 documents 表及函数",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- 确保备份已完成后再执行此脚本\nBEGIN;\n\n-- 清空其它四张表的数据（保留表结构与索引）\nTRUNCATE TABLE\n  public.document_metadata,\n  public.document_rows,\n  public.documents,\n  public.n8n_chat_histories\n  RESTART IDENTITY\n  CASCADE;\n\n-- 单一确认字符串\nSELECT '清空完成'\n  AS result_message;\n\nCOMMIT;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2608,
+        112
+      ],
+      "id": "44981c36-a25a-42f5-a965-eba05b317f14",
+      "name": "清空所有历史数据",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "executeQuery",
+        "query": "-- 确保备份已完成后再执行此脚本\nBEGIN;\n\n-- 清空上下文表的数据（保留表结构与索引）\nTRUNCATE TABLE\n  public.n8n_chat_histories\n  RESTART IDENTITY\n  CASCADE;\n\n-- 单一确认字符串\nSELECT '上下文表清空完成'\n  AS result_message;\n\nCOMMIT;",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.postgres",
+      "typeVersion": 2.6,
+      "position": [
+        2864,
+        112
+      ],
+      "id": "869f8285-ada3-4ad7-b6f3-1374dbcaeaef",
+      "name": "清空上下文表",
+      "credentials": {
+        "postgres": {
+          "id": "C1BfdTX0cGgRJeeJ",
+          "name": "Postgres account"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "model": "qllama/bge-reranker-v2-m3:latest",
+        "topK": 5,
+        "additionalOptions": {}
+      },
+      "type": "n8n-nodes-ollama-reranker.ollamaReranker",
+      "typeVersion": 1,
+      "position": [
+        1504,
+        480
+      ],
+      "id": "d45df343-9845-410e-a684-576dcc4ac405",
+      "name": "Ollama Reranker",
+      "credentials": {
+        "ollamaApi": {
+          "id": "CTlrWgaBfyLmEm3N",
+          "name": "Ollama account"
+        }
+      }
+    }
+  ],
+  "pinData": {},
+  "connections": {
+    "Loop Over Items": {
+      "main": [
+        [],
+        [
+          {
+            "node": "设置文件ID",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "设置文件ID": {
+      "main": [
+        [
+          {
+            "node": "删除旧数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "新建文件": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "上传文件": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "删除旧数据": {
+      "main": [
+        [
+          {
+            "node": "删除旧的数据行",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "删除旧的数据行": {
+      "main": [
+        [
+          {
+            "node": "插入文档元数据",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "插入文档元数据": {
+      "main": [
+        [
+          {
+            "node": "下载文件",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "下载文件": {
+      "main": [
+        [
+          {
+            "node": "Switch",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Switch": {
+      "main": [
+        [
+          {
+            "node": "从 Excel 文件中提取",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "从 CSV 文件中提取",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "从 pdf 文件中提取",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "从 txt 文件中提取",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "从 txt 文件中提取",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "从 Excel 文件中提取": {
+      "main": [
+        [
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Aggregate": {
+      "main": [
+        [
+          {
+            "node": "Summarize",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Summarize": {
+      "main": [
+        [
+          {
+            "node": "设置Schema",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "向量数据库",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "从 CSV 文件中提取": {
+      "main": [
+        [
+          {
+            "node": "Insert rows in a table",
+            "type": "main",
+            "index": 0
+          },
+          {
+            "node": "Aggregate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "设置Schema": {
+      "main": [
+        [
+          {
+            "node": "新增或修改文档metadata",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "从 txt 文件中提取": {
+      "main": [
+        [
+          {
+            "node": "智能切分",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "从 pdf 文件中提取": {
+      "main": [
+        [
+          {
+            "node": "智能切分",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Google Gemini Chat Model": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "智能切分",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "智能切分": {
+      "main": [
+        [
+          {
+            "node": "向量数据库",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Schedule Trigger": {
+      "main": [
+        [
+          {
+            "node": "获取被删除文件",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "聊天窗口": {
+      "main": [
+        [
+          {
+            "node": "设置变量",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "设置变量": {
+      "main": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Gemini-2.5-flash": {
+      "ai_languageModel": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_languageModel",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "RAG 查询": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embedding 模型": {
+      "ai_embedding": [
+        [
+          {
+            "node": "RAG 查询",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Embeddings 模型": {
+      "ai_embedding": [
+        [
+          {
+            "node": "向量数据库",
+            "type": "ai_embedding",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "包装Document": {
+      "ai_document": [
+        [
+          {
+            "node": "向量数据库",
+            "type": "ai_document",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "文本切片": {
+      "ai_textSplitter": [
+        [
+          {
+            "node": "包装Document",
+            "type": "ai_textSplitter",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "获取被删除文件": {
+      "main": [
+        [
+          {
+            "node": "解析",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "解析": {
+      "main": [
+        [
+          {
+            "node": "查询被删除文档记录",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "删除被删除文档向量记录": {
+      "main": [
+        [
+          {
+            "node": "删除被删除Excel 行记录",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "删除被删除Excel 行记录": {
+      "main": [
+        [
+          {
+            "node": "删除被删除文档记录",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "查询被删除文档记录": {
+      "main": [
+        [
+          {
+            "node": "删除被删除文档向量记录",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Postgres Chat Memory": {
+      "ai_memory": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_memory",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "List Documents": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Get File Content": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Query Document Rows": {
+      "ai_tool": [
+        [
+          {
+            "node": "RAG AI Agent",
+            "type": "ai_tool",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "向量数据库": {
+      "main": [
+        [
+          {
+            "node": "Loop Over Items",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Ollama Reranker": {
+      "ai_reranker": [
+        [
+          {
+            "node": "RAG 查询",
+            "type": "ai_reranker",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "active": false,
+  "settings": {
+    "executionOrder": "v1"
+  },
+  "versionId": "44a5582d-ff00-42e7-b195-c23c847538a9",
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "3897c45d5445eb1b66548a7a11e3755ae06ed73c7bd8a330c53909f8f8a0323a"
+  },
+  "id": "aXPBXPGHbTtLZF9T",
+  "tags": []
+}
